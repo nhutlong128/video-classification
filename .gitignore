@@ -3,6 +3,7 @@ Include/**
 Lib/**
 Scripts/**
 **/__pycache__/
+chkp/**
 
 ### Dump File ###
 pyvenv.cfg
