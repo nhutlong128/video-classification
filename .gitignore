@@ -1,0 +1,12 @@
+### Dump Folder ###
+Include/**
+Lib/**
+Scripts/**
+**/__pycache__/
+
+### Dump File ###
+pyvenv.cfg
+
+
+### Dataset Folder ###
+videos/**
