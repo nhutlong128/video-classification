@@ -10,8 +10,8 @@ train, valid, classes = generate_video_frame(size=SIZE, channel=CHANNEL, n_frame
 
 
 # Compile Model
-INSHAPE = (N_FRAME,) + SIZE + (CHANNEL,) # (5, 112, 112, 3)
-model = action_model(INSHAPE, len(classes))
+INSHAPE = (N_FRAME,) + SIZE + (CHANNEL,) # (N_FRAME, 224, 224, 3)
+model = action_model(INSHAPE, len(classes), 'resnet50v2')
 optimizer = keras.optimizers.Adam(0.001)
 model.compile(
     optimizer,
