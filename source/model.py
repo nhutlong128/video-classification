@@ -67,7 +67,12 @@ def build_resnet50v2(shape=(224, 224, 3)):
     return keras.Sequential([model, output])
 
 
-def action_model(shape=(10, 224, 224, 3), nbout = 3, feature_extractor='mobilenetv2'):
+def get_sequence_model(sequence_model='gru'):
+    if sequence_model == 'gru':
+        return GRU(64)
+
+
+def action_model(shape=(10, 224, 224, 3), nbout = 3, feature_extractor='mobilenetv2', sequence_model='gru'):
     # Create our convnet with (224, 224, 3) input shape
     if feature_extractor == 'mobilenetv2':
         convnet = build_mobilenet(shape[1:])
@@ -80,7 +85,7 @@ def action_model(shape=(10, 224, 224, 3), nbout = 3, feature_extractor='mobilene
     # add the convnet with (10, 224, 224, 3) shape
     model.add(TimeDistributed(convnet, input_shape=shape))
     # here, you can also use GRU or LSTM
-    model.add(GRU(64))
+    model.add(get_sequence_model(sequence_model=sequence_model))
     # and finally, we make a decision network
     model.add(Dense(1024, activation='relu'))
     model.add(Dropout(.5))
