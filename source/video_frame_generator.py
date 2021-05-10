@@ -2,36 +2,59 @@ import os
 import glob
 import keras
 from keras_video import VideoFrameGenerator
+from data.CustomVideoGenerator import CustomVideoGenerator
 import keras_video.utils
+from matplotlib import pyplot as plt
+import numpy as np
+import splitfolders
 
-def generate_video_frame(size=(112,112), channel=3, n_frame=5, batch_size=8):
+main_dir = 'videos/'
+output_dir = 'train_valid_dataset/'
+splitfolders.ratio(main_dir, output=output_dir, seed=42, ratio=(.8, .2))
+
+
+def generate_video_frame(size=(224,224), channel=3, n_frame=5, batch_size=8):
     # use sub directories names as classes
     classes = [i.split(os.path.sep)[1] for i in glob.glob('videos/*')]
     classes.sort()
     # pattern to get videos and classes
-    glob_pattern = 'videos/{classname}/*.avi'
-    # for data augmentation
-    data_aug = keras.preprocessing.image.ImageDataGenerator(
-        zoom_range=.1,
-        horizontal_flip=True,
-        rotation_range=8,
-        width_shift_range=.2,
-        height_shift_range=.2)
+    glob_pattern_train = 'train_valid_dataset/train/{classname}/*.mp4'
+    glob_pattern_val = 'train_valid_dataset/val/{classname}/*.mp4'
     # Create video frame generator
-    train = VideoFrameGenerator(
+    train = CustomVideoGenerator(
         classes=classes, 
-        glob_pattern=glob_pattern,
-        nb_frames=n_frame,
-        split_val=.33, 
+        glob_pattern= glob_pattern_train,
+        nb_frames=n_frame, 
         shuffle=True,
         batch_size=batch_size,
         target_shape=size,
         nb_channel=channel,
-        transformation=data_aug,
-        use_frame_cache=True)
-    valid = train.get_validation_generator()
+        transformation=None,
+        use_frame_cache=True,
+        img_aug=True,
+        skin_normalize=True)
+    valid = CustomVideoGenerator(
+        classes=classes, 
+        glob_pattern=glob_pattern_val,
+        nb_frames=n_frame, 
+        shuffle=True,
+        batch_size=batch_size,
+        target_shape=size,
+        nb_channel=channel,
+        transformation=None,
+        use_frame_cache=True,
+        img_aug=False,
+        skin_normalize=True)
     return train, valid, classes
 
 
 # Show samples from train generator
 #keras_video.utils.show_sample(train)
+if __name__ == "__main__":
+    train, valid, _ = generate_video_frame()
+    x,y = valid.next()
+    for batch in x:
+        for img in batch:
+            print(img)
+            plt.imshow(img)
+            plt.show()

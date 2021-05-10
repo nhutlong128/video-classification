@@ -1,8 +1,10 @@
 import keras
 from keras.layers import Conv2D, BatchNormalization, \
     MaxPool2D, GlobalMaxPool2D
-from keras.layers import TimeDistributed, GRU, Dense, Dropout
+from keras.layers import TimeDistributed, GRU, Dense, Dropout, LSTM, Flatten, Input, GlobalAveragePooling1D, GlobalMaxPooling1D
 from config import SIZE, CHANNEL, N_FRAME, BATCH_SIZE, EPOCH
+from keras.models import Model, Sequential
+
 
 
 def build_convnet(shape=(224, 224, 3)):
@@ -42,7 +44,7 @@ def build_mobilenet(shape=(224, 224, 3)):
         input_shape=shape,
         weights='imagenet')
     # Keep 9 layers to train﻿﻿ ~ can be 6, 9, 12
-    trainable = 9
+    trainable = 6
     for layer in model.layers[:-trainable]:
         layer.trainable = False
     for layer in model.layers[-trainable:]:
@@ -56,13 +58,11 @@ def build_resnet50v2(shape=(224, 224, 3)):
                                         input_shape=shape, \
                                         weights='imagenet')
     #
-    for layer in model.layers:
-        print(layer)
-    trainable = 11
-    for layer in model.layers[:-trainable]:
-        layer.trainable = False
-    for layer in model.layers[-trainable:]:
-        layer.trainable = True
+    #trainable = 11
+    #for layer in model.layers[:-trainable]:
+    #    layer.trainable = False
+    #for layer in model.layers[-trainable:]:
+    #    layer.trainable = True
     output = GlobalMaxPool2D()
     return keras.Sequential([model, output])
 
@@ -70,6 +70,8 @@ def build_resnet50v2(shape=(224, 224, 3)):
 def get_sequence_model(sequence_model='gru'):
     if sequence_model == 'gru':
         return GRU(64)
+    if sequence_model == 'lstm':
+        return LSTM(1024, activation='relu', return_sequences=True)
 
 
 def action_model(shape=(10, 224, 224, 3), nbout = 3, feature_extractor='mobilenetv2', sequence_model='gru'):
@@ -81,18 +83,40 @@ def action_model(shape=(10, 224, 224, 3), nbout = 3, feature_extractor='mobilene
     else:
         convnet = build_convnet(shape[1:])
     # then create our final model
-    model = keras.Sequential()
+    model_input = Input(shape=shape)
+    ###model = keras.Sequential()
     # add the convnet with (10, 224, 224, 3) shape
-    model.add(TimeDistributed(convnet, input_shape=shape))
+    ###model.add(TimeDistributed(convnet, input_shape=shape))
+    feature_extractor_time_distributed = TimeDistributed(convnet, input_shape=shape)(model_input)
+    ###model.add(TimeDistributed(Flatten()))
+    feature_extractor_time_distributed_flatten = TimeDistributed(Flatten())(feature_extractor_time_distributed)
     # here, you can also use GRU or LSTM
-    model.add(get_sequence_model(sequence_model=sequence_model))
+    #model.add(get_sequence_model(sequence_model=sequence_model))
+    sequence_model = get_sequence_model(sequence_model=sequence_model)(feature_extractor_time_distributed_flatten)
+    #LSTM Output
+    ###model.add(TimeDistributed(Dense(128, activation='relu')))
+    time_distributed_dense_512 = TimeDistributed(Dense(512, activation='relu'))(sequence_model)
+
+    time_distributed_dense_256 = TimeDistributed(Dense(256, activation='relu'))(time_distributed_dense_512)
+    time_distributed_dense_256_drop_out = TimeDistributed(Dropout(0.5))(time_distributed_dense_256)
+    
+    time_distributed_dense_128 = TimeDistributed(Dense(128, activation='relu'))(time_distributed_dense_256_drop_out)
+    time_distributed_dense_128_drop_out = TimeDistributed(Dropout(0.5))(time_distributed_dense_128)
+    ###model.add(TimeDistributed(Dense(64, activation='relu')))
+    time_distributed_dense_64 = TimeDistributed(Dense(64, activation='relu'))( time_distributed_dense_128_drop_out)
+    # Flatten
+    ###model.add(Flatten())
+    #merged = Flatten()(time_distributed_dense_64)
     # and finally, we make a decision network
-    model.add(Dense(1024, activation='relu'))
-    model.add(Dropout(.5))
-    model.add(Dense(512, activation='relu'))
-    model.add(Dropout(.5))
-    model.add(Dense(128, activation='relu'))
-    model.add(Dropout(.5))
-    model.add(Dense(64, activation='relu'))
-    model.add(Dense(nbout, activation='softmax'))
+    ###model.add(Dense(64, activation='relu'))
+    #dense_64 = Dense(64, activation='relu')(merged)
+    ###model.add(Dropout(.5))
+    ###model.add(Dense(nbout, activation='sigmoid'))
+    #prediction = Dense(nbout, activation='sigmoid')(dense_64)
+    predictions = TimeDistributed(Dense(nbout, activation='softmax'))(time_distributed_dense_64)
+    prediction = GlobalAveragePooling1D()(predictions)
+    #predictions = keras.layers.Average()([prediction])
+    print(f'Training model to predict {nbout} classes')
+
+    model = Model(model_input, prediction)
     return model

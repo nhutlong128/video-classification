@@ -13,7 +13,7 @@ def train_model(feature_extractor='convnet', sequence_model='gru'):
     # Compile Model
     INSHAPE = (N_FRAME,) + SIZE + (CHANNEL,) # (N_FRAME, 224, 224, 3)
     model = action_model(INSHAPE, len(classes), feature_extractor=feature_extractor, sequence_model=sequence_model)
-    optimizer = keras.optimizers.Adam(0.001)
+    optimizer = keras.optimizers.Adam(0.0001)
     model.compile(
         optimizer,
         'categorical_crossentropy',
@@ -37,9 +37,9 @@ def train_model(feature_extractor='convnet', sequence_model='gru'):
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
-    ap.add_argument("-f", "--feature-extractor", required=False, type=str, default='mobilenet',
+    ap.add_argument("-f", "--feature-extractor", required=False, type=str, default='resnet50v2',
         help="choose a feature-extractor to extract features from images")
-    ap.add_argument("-a", "--sequence-model", required=False, type=str, default='gru',
+    ap.add_argument("-a", "--sequence-model", required=False, type=str, default='lstm',
         help="choose a model to classify action")
     args = vars(ap.parse_args())
     # Get arguments

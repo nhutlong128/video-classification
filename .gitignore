@@ -4,10 +4,16 @@ Lib/**
 Scripts/**
 **/__pycache__/
 chkp/**
-
+raw/**
 ### Dump File ###
 pyvenv.cfg
 
 
 ### Dataset Folder ###
 videos/**
+original_videos/**
+to_be_videos/**
+train_valid_dataset/**
+object_dectecion_annotation/**
+share/**
+videos.rar
